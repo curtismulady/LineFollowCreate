@@ -1,0 +1,1 @@
+This project assumes that the OpenCV v2.4.3 distribution is located in the C:\opencv path.
