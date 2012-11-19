@@ -12,6 +12,7 @@ using namespace cv;
 using namespace std;
 
 void DrawRhoThetaLine(Mat& dst, float rho, float theta, Scalar color, int width);
+void InvertColorMat(Mat& dst);
 
 CvCapture* cap = NULL;
 Mat camframe,camframecopy,blurframe,cannyframe,houghframe;
@@ -40,23 +41,18 @@ int main(array<System::String ^> ^args)
 		else
 			flip (camframe,camframecopy,0);
 
-		GaussianBlur(camframe,blurframe,cv::Size(11,11),2,0);
-		Canny(blurframe,cannyframe,10,100,3);
+		// invert and blur the image
+		InvertColorMat(camframe);
+		GaussianBlur(camframe,blurframe,cv::Size(11,11),2.3,0);
 
-		//Get Hough Lines
-		cv::HoughLines(cannyframe,lines,1,__PI__/180,60.0);
-		it = lines.begin();
 
-		while(it!=lines.end())
-		{
-			float rho = (*it)[0]; 
-			float theta = (*it)[1]; 
-			DrawRhoThetaLine(camframe, rho, theta, cv::Scalar(255, 0, 0), 1);
-			it++;
-		}
 
-		imshow("canny",cannyframe);
-		imshow("frame",camframe);
+		
+
+		
+
+
+		imshow("frame",blurframe);
 
 		waitKey(1);
 
@@ -86,3 +82,35 @@ void DrawRhoThetaLine(Mat& dst, float rho, float theta, Scalar color, int width)
 		cv::line(dst,pt1,pt2,color,width);
 	}
 }
+
+void InvertColorMat(Mat& dst)
+{
+	for (int i = 0; i < dst.rows; i++)
+	{
+		for (int j = 0; j < dst.cols; j++)
+		{
+			dst.data[dst.step * i + j * dst.channels() + 0] = 255 - dst.data[dst.step * i + j * dst.channels() + 0];
+			dst.data[dst.step * i + j * dst.channels() + 1] = 255 - dst.data[dst.step * i + j * dst.channels() + 1];
+			dst.data[dst.step * i + j * dst.channels() + 2] = 255 - dst.data[dst.step * i + j * dst.channels() + 2];
+
+		}
+	}
+}
+
+
+//OLD
+/*
+Canny(blurframe,cannyframe,10,100,3);
+//Get Hough Lines
+cv::HoughLines(cannyframe,lines,1,__PI__/180,60.0);
+it = lines.begin();
+
+while(it!=lines.end())
+{
+	float rho = (*it)[0]; 
+	float theta = (*it)[1]; 
+	DrawRhoThetaLine(camframe, rho, theta, cv::Scalar(255, 0, 0), 1);
+	it++;
+}
+imshow("canny",cannyframe);
+*/

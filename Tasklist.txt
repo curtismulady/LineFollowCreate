@@ -1,0 +1,20 @@
+4180 Task List:
+	-Line Detection 
+		input: line color
+		output: direction to turn, "strength" of turn
+	-Map design and printout (on large format printer)
+		3 paths (one red, one green, one blue)
+		45 degree bends (or curved bends) in all turns (i.e., no hard turns)
+		Paths cross at 90 degree angles
+		keep paths relatively spaced out. 
+		thin path lines (~1/8" to ~1/4")
+		All paths come from same start location, go to different end locations. 
+		Paths "end" in a box of same path color
+		size of map: 10' x 10' (too big?)
+	-Sonar Interface (through mbed)
+		output: output distance for each sonar device
+	-Robot Gripper
+		physical test
+		electrical test
+	-IR code detector
+		output: "mode" code (differnt number based on what button on IR remote is pressed)
