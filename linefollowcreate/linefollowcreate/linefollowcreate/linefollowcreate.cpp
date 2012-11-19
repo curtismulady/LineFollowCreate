@@ -14,6 +14,7 @@ using namespace std;
 void DrawRhoThetaLine(Mat& dst, float rho, float theta, Scalar color, int width);
 void InvertColorMat(Mat& dst);
 void Draw_LineFollow_LineLoc(Mat& src, Mat& dst, int row_to_watch);
+int LineFollow_getDeltaLineLoc(Mat& src, int row_to_watch,int centerline_col);
 
 CvCapture* cap = NULL;
 Mat camframe,camframecopy,invframe,blurframe,cannyframe,houghframe,greyframe;
@@ -48,6 +49,10 @@ int main(array<System::String ^> ^args)
 		GaussianBlur(invframe,blurframe,cv::Size(11,11),2.3,0);
 		// draw line loc stuff
 		Draw_LineFollow_LineLoc(blurframe,camframecopy,blurframe.rows-20);
+		// do smart stuff
+		int lineloc = LineFollow_getDeltaLineLoc(blurframe, blurframe.rows-20, blurframe.cols/2);
+		printf("%d: ",lineloc);
+		(lineloc>0)?printf("Go Right\n") : printf("Go Left\n");
 
 
 
@@ -85,6 +90,28 @@ void DrawRhoThetaLine(Mat& dst, float rho, float theta, Scalar color, int width)
 		cv::Point pt2(dst.cols,(int)((rho-dst.cols*cos(theta))/sin(theta)));
 		cv::line(dst,pt1,pt2,color,width);
 	}
+}
+
+int LineFollow_getDeltaLineLoc(Mat& src, int row_to_watch,int centerline_col)
+{
+	//find big pos dv and big neg dv on specd row
+	Mat grey;
+	cv::cvtColor(src,grey,CV_BGR2GRAY);
+	int pos_dv_x_loc = 0, pos_dv_val = 0;
+	int neg_dv_x_loc = 0, neg_dv_val= 0;
+	for(int i=1; i<grey.cols-1; i++){
+		int temp_dv = grey.data[row_to_watch*grey.step+i] - grey.data[row_to_watch*grey.step+i+1];
+		if(temp_dv > pos_dv_val){
+			pos_dv_x_loc = i;
+			pos_dv_val = temp_dv;
+		}
+		if(temp_dv < neg_dv_val){
+			neg_dv_x_loc = i;
+			neg_dv_val = temp_dv;
+		}	
+	}
+	int line_loc = (pos_dv_x_loc + neg_dv_x_loc) / 2;
+	return(line_loc - centerline_col);
 }
 
 void Draw_LineFollow_LineLoc(Mat& src, Mat& dst, int row_to_watch)
