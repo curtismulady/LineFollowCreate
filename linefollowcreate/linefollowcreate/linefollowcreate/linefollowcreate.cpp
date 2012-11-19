@@ -18,6 +18,7 @@ int LineFollow_getDeltaLineLoc(Mat& src, int row_to_watch,int centerline_col);
 
 CvCapture* cap = NULL;
 Mat camframe,camframecopy,invframe,blurframe,cannyframe,houghframe,greyframe;
+Mat origframe,colorfiltframe;
 IplImage* iplimg;
 
 vector<cv::Vec2f> lines;
@@ -44,6 +45,7 @@ int main(array<System::String ^> ^args)
 			flip (camframe,camframecopy,0);
 
 		// invert and blur the image
+		camframecopy.copyTo(origframe);
 		camframecopy.copyTo(invframe);
 		InvertColorMat(invframe);
 		GaussianBlur(invframe,blurframe,cv::Size(11,11),2.3,0);
@@ -52,7 +54,39 @@ int main(array<System::String ^> ^args)
 		// do smart stuff
 		int lineloc = LineFollow_getDeltaLineLoc(blurframe, blurframe.rows-20, blurframe.cols/2);
 		printf("%d: ",lineloc);
-		(lineloc>0)?printf("Go Right\n") : printf("Go Left\n");
+		//(lineloc>0)?printf("Go Right\n") : printf("Go Left\n");
+
+		//camframecopy.copyTo(colorfiltframe);
+		origframe.convertTo(colorfiltframe,CV_32FC3,1./255);
+		for (int i = 0; i < colorfiltframe.rows; i++)
+		{
+			for (int j = 0; j < colorfiltframe.cols; j++)
+			{
+				float total = colorfiltframe.at<Vec3f>(i,j)[0] + colorfiltframe.at<Vec3f>(i,j)[1] + colorfiltframe.at<Vec3f>(i,j)[2];
+				float b_levels = colorfiltframe.at<Vec3f>(i,j)[0]/total;
+				float g_levels = colorfiltframe.at<Vec3f>(i,j)[1]/total;
+				float r_levels = colorfiltframe.at<Vec3f>(i,j)[2]/total;
+				if(j==colorfiltframe.cols/2 && i==colorfiltframe.rows/2)
+				{
+					printf("Total=%01.3f | Gabs=%01.3f | Grel=%01.3f\n",total,colorfiltframe.at<Vec3f>(i,j)[1],g_levels);
+				}
+
+				//test case: green
+				if(b_levels>0.5 )
+				{
+					colorfiltframe.at<Vec3f>(i,j)[0] = colorfiltframe.at<Vec3f>(i,j)[0];
+					colorfiltframe.at<Vec3f>(i,j)[1] = colorfiltframe.at<Vec3f>(i,j)[0];
+					colorfiltframe.at<Vec3f>(i,j)[2] = colorfiltframe.at<Vec3f>(i,j)[0];
+				}else{
+					colorfiltframe.at<Vec3f>(i,j)[0] = 0.;
+					colorfiltframe.at<Vec3f>(i,j)[1] = 0.;
+					colorfiltframe.at<Vec3f>(i,j)[2] = 0.;
+				}
+			}
+		}
+		cv::rectangle(colorfiltframe,cv::Point(colorfiltframe.cols/2-1,colorfiltframe.rows/2-1),cv::Point(colorfiltframe.cols/2+1,colorfiltframe.rows/2+1),cv::Scalar(0,1.0,0));
+
+
 
 
 
@@ -61,6 +95,7 @@ int main(array<System::String ^> ^args)
 
 
 		imshow("frame",camframecopy);
+		imshow("floatframe",colorfiltframe);
 
 
 		waitKey(1);
