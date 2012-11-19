@@ -13,9 +13,10 @@ using namespace std;
 
 void DrawRhoThetaLine(Mat& dst, float rho, float theta, Scalar color, int width);
 void InvertColorMat(Mat& dst);
+void Draw_LineFollow_LineLoc(Mat& src, Mat& dst, int row_to_watch);
 
 CvCapture* cap = NULL;
-Mat camframe,camframecopy,blurframe,cannyframe,houghframe;
+Mat camframe,camframecopy,invframe,blurframe,cannyframe,houghframe,greyframe;
 IplImage* iplimg;
 
 vector<cv::Vec2f> lines;
@@ -42,17 +43,20 @@ int main(array<System::String ^> ^args)
 			flip (camframe,camframecopy,0);
 
 		// invert and blur the image
-		InvertColorMat(camframe);
-		GaussianBlur(camframe,blurframe,cv::Size(11,11),2.3,0);
+		camframecopy.copyTo(invframe);
+		InvertColorMat(invframe);
+		GaussianBlur(invframe,blurframe,cv::Size(11,11),2.3,0);
+		// draw line loc stuff
+		Draw_LineFollow_LineLoc(blurframe,camframecopy,blurframe.rows-20);
+
 
 
 
 		
 
-		
 
+		imshow("frame",camframecopy);
 
-		imshow("frame",blurframe);
 
 		waitKey(1);
 
@@ -81,6 +85,38 @@ void DrawRhoThetaLine(Mat& dst, float rho, float theta, Scalar color, int width)
 		cv::Point pt2(dst.cols,(int)((rho-dst.cols*cos(theta))/sin(theta)));
 		cv::line(dst,pt1,pt2,color,width);
 	}
+}
+
+void Draw_LineFollow_LineLoc(Mat& src, Mat& dst, int row_to_watch)
+{
+	//find big pos dv and big neg dv on specd row
+	Mat grey;
+	cv::cvtColor(src,grey,CV_BGR2GRAY);
+	cv::line(dst,cv::Point(0,row_to_watch-2),cv::Point(grey.cols,row_to_watch-2),cv::Scalar(0,0,255));
+	cv::line(dst,cv::Point(0,row_to_watch+2),cv::Point(grey.cols,row_to_watch+2),cv::Scalar(0,0,255));
+		
+	int pos_dv_x_loc = 0, pos_dv_val = 0;
+	int neg_dv_x_loc = 0, neg_dv_val= 0;
+	for(int i=1; i<grey.cols-1; i++)
+	{
+		int temp_dv = grey.data[row_to_watch*grey.step+i] - grey.data[row_to_watch*grey.step+i+1];
+		if(temp_dv > pos_dv_val)
+		{
+			pos_dv_x_loc = i;
+			pos_dv_val = temp_dv;
+		}
+		if(temp_dv < neg_dv_val)
+		{
+			neg_dv_x_loc = i;
+			neg_dv_val = temp_dv;
+		}
+
+		grey.data[(row_to_watch-2)*grey.step+i] = 0;
+		grey.data[(row_to_watch+2)*grey.step+i] = 0;
+			
+	}
+	cv::rectangle(dst,cv::Point(pos_dv_x_loc,row_to_watch-3),cv::Point(neg_dv_x_loc,row_to_watch+3),cv::Scalar(0,255,0));
+	cv::rectangle(dst,cv::Point((pos_dv_x_loc+neg_dv_x_loc)/2-1,row_to_watch-1),cv::Point((pos_dv_x_loc+neg_dv_x_loc)/2+1,row_to_watch+1),cv::Scalar(0,255,0));
 }
 
 void InvertColorMat(Mat& dst)
