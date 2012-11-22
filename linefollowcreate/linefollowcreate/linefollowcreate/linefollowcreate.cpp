@@ -11,10 +11,13 @@ using namespace System;
 using namespace cv;
 using namespace std;
 
+typedef enum {COLOR_RED=2,COLOR_GREEN=1,COLOR_BLUE=0} COLORNAME_t;
+
 void DrawRhoThetaLine(Mat& dst, float rho, float theta, Scalar color, int width);
 void InvertColorMat(Mat& dst);
 void Draw_LineFollow_LineLoc(Mat& src, Mat& dst, int row_to_watch);
 int LineFollow_getDeltaLineLoc(Mat& src, int row_to_watch,int centerline_col);
+void filter_Color(Mat& src, Mat& dst, COLORNAME_t color, float pct_thresh);
 
 CvCapture* cap = NULL;
 Mat camframe,camframecopy,invframe,blurframe,cannyframe,houghframe,greyframe;
@@ -56,6 +59,7 @@ int main(array<System::String ^> ^args)
 		printf("%d: ",lineloc);
 		//(lineloc>0)?printf("Go Right\n") : printf("Go Left\n");
 
+		/*
 		//camframecopy.copyTo(colorfiltframe);
 		origframe.convertTo(colorfiltframe,CV_32FC3,1./255);
 		for (int i = 0; i < colorfiltframe.rows; i++)
@@ -85,7 +89,11 @@ int main(array<System::String ^> ^args)
 			}
 		}
 		cv::rectangle(colorfiltframe,cv::Point(colorfiltframe.cols/2-1,colorfiltframe.rows/2-1),cv::Point(colorfiltframe.cols/2+1,colorfiltframe.rows/2+1),cv::Scalar(0,1.0,0));
+		*/
 
+		//filter_Color(origframe,colorfiltframe, COLOR_BLUE, 0.5);
+		//filter_Color(origframe,colorfiltframe, COLOR_RED, 0.6);
+		filter_Color(origframe,colorfiltframe, COLOR_GREEN, 0.5);
 
 
 
@@ -147,6 +155,35 @@ int LineFollow_getDeltaLineLoc(Mat& src, int row_to_watch,int centerline_col)
 	}
 	int line_loc = (pos_dv_x_loc + neg_dv_x_loc) / 2;
 	return(line_loc - centerline_col);
+}
+
+void filter_Color(Mat& src, Mat& dst, COLORNAME_t color, float pct_thresh)
+{
+	//Arguments
+	//	color: COLOR_RED, COLOR_GREEN, or COLOR_BLUE for color filter selection
+	//	pct_thresh: percent threshold of color dominance (in a r:g:b ratio) to "accept" as "of the right color". Typ~=[0.4 to 0.5]
+	src.convertTo(dst,CV_32FC3,1./255);
+	for (int i = 0; i < dst.rows; i++)
+	{
+		for (int j = 0; j < dst.cols; j++)
+		{
+			//For each pixel: compute relative levels
+			float color_levels[3];
+			float total = dst.at<Vec3f>(i,j)[0] + dst.at<Vec3f>(i,j)[1] + dst.at<Vec3f>(i,j)[2];
+			for(int k=0; k<3; k++) color_levels[k] = dst.at<Vec3f>(i,j)[k]/total;
+			//keep color pixel if thresh=good 
+			if(color_levels[(int)color]>pct_thresh )
+			{
+				dst.at<Vec3f>(i,j)[0] = dst.at<Vec3f>(i,j)[(int)color];
+				dst.at<Vec3f>(i,j)[1] = dst.at<Vec3f>(i,j)[(int)color];
+				dst.at<Vec3f>(i,j)[2] = dst.at<Vec3f>(i,j)[(int)color];
+			}else{
+				dst.at<Vec3f>(i,j)[0] = 0.;
+				dst.at<Vec3f>(i,j)[1] = 0.;
+				dst.at<Vec3f>(i,j)[2] = 0.;
+			}
+		}
+	}
 }
 
 void Draw_LineFollow_LineLoc(Mat& src, Mat& dst, int row_to_watch)

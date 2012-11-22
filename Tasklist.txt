@@ -11,10 +11,8 @@
 		All paths come from same start location, go to different end locations. 
 		Paths "end" in a box of same path color
 		size of map: 10' x 10' (too big?)
+	-Object ID system (barcode, color box, ?)
 	-Sonar Interface (through mbed)
 		output: output distance for each sonar device
-	-Robot Gripper
-		physical test
-		electrical test
 	-IR code detector
 		output: "mode" code (differnt number based on what button on IR remote is pressed)
