@@ -30,6 +30,9 @@
     <ClInclude Include="CreateSerial.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="app.rc">
@@ -47,6 +50,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CreateSerial.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="common.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
