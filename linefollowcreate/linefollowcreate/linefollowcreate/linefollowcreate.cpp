@@ -11,6 +11,7 @@
 
 //#define USE_ROBOT_SERIAL_PORT
 #define SHOW_SCREENS
+#define LINE_DELTA_THRESH_U8 30
 
 
 
@@ -82,8 +83,8 @@ int main(array<System::String ^> ^args)
 		filter_Color(blurframe,colorfilt_linedet_frame, colorMode, threshVal);	//filter frame for color - turns to float
 	
 
-		int lineloc = LineFollow_getDeltaLineLoc(colorfilt_linedet_frame, colorfilt_linedet_frame.rows-20, colorfilt_linedet_frame.cols/2, 40);
-		Draw_LineFollow_LineLoc(colorfilt_linedet_frame,colorfilt_linedet_frame,colorfilt_linedet_frame.rows-20, 40);		
+		int lineloc = LineFollow_getDeltaLineLoc(colorfilt_linedet_frame, colorfilt_linedet_frame.rows-20, colorfilt_linedet_frame.cols/2, LINE_DELTA_THRESH_U8);
+		Draw_LineFollow_LineLoc(colorfilt_linedet_frame,colorfilt_linedet_frame,colorfilt_linedet_frame.rows-20, LINE_DELTA_THRESH_U8);		
 		//printf("%d: ",lineloc);
 		//(lineloc>0)?printf("Go Right\n") : printf("Go Left\n");
 
@@ -103,7 +104,8 @@ int main(array<System::String ^> ^args)
 
 		}
 
-		printf("solid color green: %f\n\n",getIsFullScreenColor(origframe,COLOR_GREEN,0.5));
+		//printf("solid color green: %f\n\n",getIsFullScreenColor(origframe,COLOR_GREEN,0.5));
+		printf("line width: %d\n\n",LineFollow_getLineWidth(colorfilt_linedet_frame, colorfilt_linedet_frame.rows-20, colorfilt_linedet_frame.cols/2, LINE_DELTA_THRESH_U8) );
 
 
 

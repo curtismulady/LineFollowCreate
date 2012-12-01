@@ -82,7 +82,24 @@ int LineFollow_getDeltaLineLoc(Mat& src, int row_to_watch,int centerline_col, in
 
 int LineFollow_getLineWidth(Mat& src, int row_to_watch,int centerline_col, int delta_thresh)
 {
-	return (0);
+	//find big pos dv and big neg dv on specd row
+	Mat grey;
+	cv::cvtColor(src,grey,CV_BGR2GRAY);
+	int pos_dv_x_loc = 0, pos_dv_val = 0;
+	int neg_dv_x_loc = 0, neg_dv_val= 0;
+	for(int i=1; i<grey.cols-1; i++){
+		int temp_dv = grey.data[row_to_watch*grey.step+i] - grey.data[row_to_watch*grey.step+i+1];
+		if(temp_dv > pos_dv_val && temp_dv > delta_thresh){
+			pos_dv_x_loc = i;
+			pos_dv_val = temp_dv;
+		}
+		if(temp_dv < neg_dv_val && temp_dv < -1*delta_thresh){
+			neg_dv_x_loc = i;
+			neg_dv_val = temp_dv;
+		}	
+	}
+	//Return width of line
+	return(abs(pos_dv_x_loc - neg_dv_x_loc));
 }
 
 void filter_Color(Mat& src, Mat& dst, COLORNAME_t color, float pct_thresh)
