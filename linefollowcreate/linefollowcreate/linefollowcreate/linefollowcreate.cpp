@@ -18,6 +18,7 @@
 #define COMNUM 1
 #define ROBOT_SPEED_BASE 80
 #define CORRECTION_DIV 7
+#define RUN_STATE_MACHINE
 
 //=============================
 
@@ -33,6 +34,22 @@ Mat origframe,colorfiltframe,colorfilt_linedet_frame;
 IplImage* iplimg;
 COLORNAME_t colorMode = COLOR_BLUE;
 float threshVal = 0.5;
+
+//State Machine Enumeration
+typedef enum {
+				ROBOT_STATE_Init,
+				ROBOT_STATE_WaitForIDScan,
+				ROBOT_STATE_FindLineToGoal,
+				ROBOT_STATE_FollowLineToGoal,
+				ROBOT_STATE_DrivePastGoal,
+				ROBOT_STATE_WaitForReturnCommand,
+				ROBOT_STATE_FindLineToHome,
+				ROBOT_STATE_FollowLineToHome,
+				ROBOT_STATE_DrivePastHome
+			} RobotState_t;
+
+RobotState_t RobotState = ROBOT_STATE_Init;
+
 
 
 //Robot's Serial Connection
@@ -83,6 +100,9 @@ int main(array<System::String ^> ^args)
 		else
 			flip (camframe,camframecopy,0);
 
+
+#ifndef RUN_STATE_MACHINE
+
 		//Apply Filters
 		camframecopy.copyTo(origframe);											//get a new frame to work with
 		GaussianBlur(origframe,blurframe,cv::Size(11,11),2.3,0);				//blur the frame
@@ -131,8 +151,80 @@ int main(array<System::String ^> ^args)
 		if( ret == 114 ) {colorMode = COLOR_RED; threshVal=0.67;}		// 'r' key - follow red lines
 		if( ret == 107 ) {colorMode = COLOR_BLACK; threshVal=0.10;}		// 'k' key - follow black lines
 
+#endif 
+
+#ifdef RUN_STATE_MACHINE
+
+		//Apply Filters
+		camframecopy.copyTo(origframe);											//get a new frame to work with
+		GaussianBlur(origframe,blurframe,cv::Size(11,11),2.3,0);				//blur the frame
+		filter_Color(blurframe,colorfilt_linedet_frame, colorMode, threshVal);	//filter frame for color - turns to float
+
+		//Detect line location and width
+		int lineloc = LineFollow_getDeltaLineLoc(colorfilt_linedet_frame, colorfilt_linedet_frame.rows-20, colorfilt_linedet_frame.cols/2, LINE_DELTA_THRESH_U8);
+		int line_width = LineFollow_getLineWidth(colorfilt_linedet_frame, colorfilt_linedet_frame.rows-20, colorfilt_linedet_frame.cols/2, LINE_DELTA_THRESH_U8) ;
+		Draw_LineFollow_LineLoc(colorfilt_linedet_frame,colorfilt_linedet_frame,colorfilt_linedet_frame.rows-20, LINE_DELTA_THRESH_U8);		
+		
+		//Draw to Window and look for keypress
+		imshow("floatframe",colorfilt_linedet_frame);
+		int ret = waitKey(1);
+
+		//=========ROBOT STATE MACHINE================
+		printf("State=");
+		switch(RobotState)
+		{
+		case ROBOT_STATE_Init:
+			printf("Init");
+			if(ret == 32 || ret == 13)
+				RobotState = ROBOT_STATE_WaitForIDScan;
+			break;
+
+		case ROBOT_STATE_WaitForIDScan:
+			printf("WaitForIDScan");
+			break;
+
+		case ROBOT_STATE_FindLineToGoal:
+			printf("FindLineToGoal");
+			break;
+
+		case ROBOT_STATE_FollowLineToGoal:
+			printf("FollowLineToGoal");
+			break;
+
+		case ROBOT_STATE_DrivePastGoal:
+			printf("DrivePastGoal");
+			break;
+
+		case ROBOT_STATE_WaitForReturnCommand:
+			printf("WaitForReturnCommand");
+			break;
+
+		case ROBOT_STATE_FindLineToHome:
+			printf("FindLineToHome");
+			break;
+
+		case ROBOT_STATE_FollowLineToHome:
+			printf("FollowLineToHome");
+			break;
+
+		case ROBOT_STATE_DrivePastHome:
+			printf("DrivePastHome");
+			break;
+
+		}
+		printf("\n");
+		//=========END ROBOT STATE MACHINE================
+
+
+
+
+
+#endif
+
 	}
 	
+
+
 	//Stop Robot
 	printf("\nStopping Motors\n");
 	#ifdef USE_ROBOT_SERIAL_PORT
