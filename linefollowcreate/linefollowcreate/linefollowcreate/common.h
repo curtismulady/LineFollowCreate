@@ -11,8 +11,6 @@
 #include "CreateSerial.h"
 
 #define __PI__ 3.14159 
-#define COMNUM 1
-#define CORRECTION_DIV 7
 
 using namespace System;
 using namespace cv;

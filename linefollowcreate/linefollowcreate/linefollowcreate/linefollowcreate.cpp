@@ -1,4 +1,4 @@
-// opencv_test_pgm.cpp : main project file.
+// linefollowcreate.cpp : main project file.
 
 #include "stdafx.h"
 #include <opencv2/core/core.hpp>
@@ -9,17 +9,24 @@
 #include "CreateSerial.h"
 #include "common.h"
 
+
+//===System Specific Defines===
+
 //#define USE_ROBOT_SERIAL_PORT
 #define SHOW_SCREENS
 #define LINE_DELTA_THRESH_U8 30
+#define COMNUM 1
+#define ROBOT_SPEED_BASE 80
+#define CORRECTION_DIV 7
 
-
+//=============================
 
 using namespace System;
 using namespace cv;
 using namespace std;
 
 
+//Global Variables
 CvCapture* cap = NULL;
 Mat camframe,camframecopy,invframe,blurframe,cannyframe,houghframe,greyframe;
 Mat origframe,colorfiltframe,colorfilt_linedet_frame;
@@ -28,7 +35,7 @@ COLORNAME_t colorMode = COLOR_BLUE;
 float threshVal = 0.5;
 
 
-
+//Robot's Serial Connection
 #ifdef USE_ROBOT_SERIAL_PORT
 CreateSerial robot(COMNUM);
 #endif
@@ -36,26 +43,25 @@ CreateSerial robot(COMNUM);
 
 int main(array<System::String ^> ^args)
 {
+	//Notify user that program is about to start
     Console::WriteLine(L"Starting...");
 
+	//Start Robot - Initialize 
 	#ifdef USE_ROBOT_SERIAL_PORT
-	//Start Robot
 	robot.StartRobot();
 	robot.SetMode_Full();
 	#endif
 
-	Console::WriteLine(L"ready?\n");
-	
-	
+	//Query user: are you ready>
+	Console::WriteLine(L"Ready?\n");	
 
-
+	//Setup Camera Connection
 	cap = cvCaptureFromCAM(0);
 	if(!cap) printf ("No camera detected.");
-
 	iplimg = cvQueryFrame(cap);
 	camframe = iplimg;
 
-
+	//Get First Frame from Camera
 	if(iplimg->origin == IPL_ORIGIN_TL)
 		camframe.copyTo(camframecopy);
 	else
@@ -68,53 +74,54 @@ int main(array<System::String ^> ^args)
 
 	while(cap)
 	{
+		//Get Frame from Camera
 		iplimg = cvQueryFrame(cap);
 		camframe = iplimg;
-
 		if(camframe.empty()) break;
 		if(iplimg->origin == IPL_ORIGIN_TL)
 			camframe.copyTo(camframecopy);
 		else
 			flip (camframe,camframecopy,0);
 
-		// apply filters
+		//Apply Filters
 		camframecopy.copyTo(origframe);											//get a new frame to work with
 		GaussianBlur(origframe,blurframe,cv::Size(11,11),2.3,0);				//blur the frame
 		filter_Color(blurframe,colorfilt_linedet_frame, colorMode, threshVal);	//filter frame for color - turns to float
 	
 
+		//Detect line location and width
 		int lineloc = LineFollow_getDeltaLineLoc(colorfilt_linedet_frame, colorfilt_linedet_frame.rows-20, colorfilt_linedet_frame.cols/2, LINE_DELTA_THRESH_U8);
+		int line_width = LineFollow_getLineWidth(colorfilt_linedet_frame, colorfilt_linedet_frame.rows-20, colorfilt_linedet_frame.cols/2, LINE_DELTA_THRESH_U8) ;
 		Draw_LineFollow_LineLoc(colorfilt_linedet_frame,colorfilt_linedet_frame,colorfilt_linedet_frame.rows-20, LINE_DELTA_THRESH_U8);		
-		//printf("%d: ",lineloc);
-		//(lineloc>0)?printf("Go Right\n") : printf("Go Left\n");
-
+		
+		//Drive Robot
 		if(lineloc != 0xFFFF)
 		{
 			//follow line
-			//printf("R=%d: L=%d\n",50-lineloc,50+lineloc);
 			#ifdef USE_ROBOT_SERIAL_PORT
-			robot.DriveMotorDirect(80-lineloc/CORRECTION_DIV,80+lineloc/CORRECTION_DIV);
+			robot.DriveMotorDirect(ROBOT_SPEED_BASE-lineloc/CORRECTION_DIV,ROBOT_SPEED_BASE+lineloc/CORRECTION_DIV);
 			#endif
 		}else{
 			//find line
-			//printf("Oh,crap! Lost the line.\n");
 			#ifdef USE_ROBOT_SERIAL_PORT
-			robot.DriveMotorDirect(80,-80);
+			robot.DriveMotorDirect(ROBOT_SPEED_BASE,-ROBOT_SPEED_BASE);
 			#endif
 
 		}
 
+		//======Debug Code======
 		//printf("solid color green: %f\n\n",getIsFullScreenColor(origframe,COLOR_GREEN,0.5));
 		printf("line width: %d\n\n",LineFollow_getLineWidth(colorfilt_linedet_frame, colorfilt_linedet_frame.rows-20, colorfilt_linedet_frame.cols/2, LINE_DELTA_THRESH_U8) );
-
+		//printf("%d: ",lineloc);
+		//(lineloc>0)?printf("Go Right\n") : printf("Go Left\n");
 
 
 		
-
+		//Display Screens
 		#ifdef SHOW_SCREENS
 		imshow("frame",camframecopy);
-		imshow("floatframe",colorfilt_linedet_frame);
 		#endif
+		imshow("floatframe",colorfilt_linedet_frame);
 
 		//End of this loop - what to do next?
 		int ret = waitKey(1);											//Nothing, keep going
@@ -124,37 +131,17 @@ int main(array<System::String ^> ^args)
 		if( ret == 114 ) {colorMode = COLOR_RED; threshVal=0.67;}		// 'r' key - follow red lines
 		if( ret == 107 ) {colorMode = COLOR_BLACK; threshVal=0.10;}		// 'k' key - follow black lines
 
-
-
-
 	}
 	
+	//Stop Robot
 	printf("\nStopping Motors\n");
 	#ifdef USE_ROBOT_SERIAL_PORT
 	robot.DriveMotorDirect(0,0);
 	#endif
 
 
-
+	//End of Line
     return 0;
 }
 
 
-
-
-//OLD
-/*
-Canny(blurframe,cannyframe,10,100,3);
-//Get Hough Lines
-cv::HoughLines(cannyframe,lines,1,__PI__/180,60.0);
-it = lines.begin();
-
-while(it!=lines.end())
-{
-	float rho = (*it)[0]; 
-	float theta = (*it)[1]; 
-	DrawRhoThetaLine(camframe, rho, theta, cv::Scalar(255, 0, 0), 1);
-	it++;
-}
-imshow("canny",cannyframe);
-*/
