@@ -17,7 +17,7 @@
 #define USE_ROBOT_SERIAL_PORT
 #define RUN_STATE_MACHINE
 #define SHOW_SCREENS
-#define MAKE_LOG_FILE
+//#define MAKE_LOG_FILE
 
 #define LINE_DELTA_THRESH_U8 30
 #define COMNUM 1
@@ -41,6 +41,7 @@ Mat ylwfiltframe,ylwfilt_linedet_frame;
 
 //Misc Variables
 IplImage* iplimg;
+
 COLORNAME_t colorMode = COLOR_BLUE;
 float threshVal = 0.39;
 int lineloc,lineloc_last,line_width;
@@ -133,6 +134,12 @@ int main(array<System::String ^> ^args)
 
 
 
+
+
+
+
+
+
 	while(cap)
 	{
 		//Inc framecounter
@@ -163,28 +170,12 @@ int main(array<System::String ^> ^args)
 		camframecopy.copyTo(origframe);											//get a new frame to work with
 		GaussianBlur(origframe,blurframe,cv::Size(11,11),2.3,0);				//blur the frame
 		filter_Color(blurframe,colorfilt_linedet_frame, colorMode, threshVal);	//filter frame for color
-		//filter_Color(blurframe,blackfilt_linedet_frame, COLOR_BLACK, 0.25);	//filter frame for black
-		Mat ylarg, ylarg2;
-		cv::cvtColor(blurframe, ylarg, CV_BGR2HSV);
-		inRange(ylarg, Scalar(21, 150, 100), Scalar(29, 255, 255), ylarg2);
-		//imshow("clarg",clarg2);
-		//blurframe.copyTo(colorfilt_linedet_frame,clarg2);
-		cv::cvtColor(ylarg2, ylwfilt_linedet_frame, CV_GRAY2BGR);
-		//Black Filter
-		/*Mat blarg,blarg2,goblinman;
-		cv::cvtColor(blurframe, blarg, CV_BGR2HSV);
-		inRange(blarg, Scalar(0, 0, 0), Scalar(180, 255, 10), blarg2);
-		cv::cvtColor(blarg2, blackfilt_linedet_frame, CV_GRAY2BGR);*/
 
 
 		//Detect line location and width
 		if(lineloc != 0xFFFF && line_width < 500 && line_width > 0  && lineloc < 300 && lineloc > -300) lineloc_last = lineloc;
 		lineloc = LineFollow_getDeltaLineLoc(colorfilt_linedet_frame, colorfilt_linedet_frame.rows-20, colorfilt_linedet_frame.cols/2, LINE_DELTA_THRESH_U8);
 		line_width = LineFollow_getLineWidth(colorfilt_linedet_frame, colorfilt_linedet_frame.rows-20, colorfilt_linedet_frame.cols/2, LINE_DELTA_THRESH_U8) ;
-		/*blacklineloc = LineFollow_getDeltaLineLoc(blackfilt_linedet_frame, blackfilt_linedet_frame.rows-20, blackfilt_linedet_frame.cols/2, LINE_DELTA_THRESH_U8);
-		blackline_width = LineFollow_getLineWidth(blackfilt_linedet_frame, blackfilt_linedet_frame.rows-20, blackfilt_linedet_frame.cols/2, LINE_DELTA_THRESH_U8) ;*/
-		ylwlineloc = LineFollow_getDeltaLineLoc(ylwfilt_linedet_frame, ylwfilt_linedet_frame.rows-20, ylwfilt_linedet_frame.cols/2, LINE_DELTA_THRESH_U8);
-		ylwline_width = LineFollow_getLineWidth(ylwfilt_linedet_frame, ylwfilt_linedet_frame.rows-20, ylwfilt_linedet_frame.cols/2, LINE_DELTA_THRESH_U8) ;
 		Draw_LineFollow_LineLoc(colorfilt_linedet_frame,colorfilt_linedet_frame,colorfilt_linedet_frame.rows-20, LINE_DELTA_THRESH_U8);		
 		printf("Line: %04d | LineLast: %04d | LineWidth : %04d\n",lineloc,lineloc_last,line_width);
 		
@@ -268,7 +259,7 @@ int main(array<System::String ^> ^args)
 			
 			//printf("BLACK: Line: %04d | LineLast: %04d | LineWidth : %04d\n",blacklineloc,blacklineloc_last,blackline_width);
 			
-			if(line_width > 400)
+			if(line_width > 400 && line_width < 600)
 			{
 				printf("\nGOt It?\n");
 				RobotState = ROBOT_STATE_DrivePastGoal;
@@ -339,7 +330,7 @@ int main(array<System::String ^> ^args)
 		case ROBOT_STATE_FindLineToHome:
 			printf("FindLineToHome");
 			
-			if(line_width > 400)
+			if(line_width > 400 && line_width < 600)
 			{
 				printf("\nGOt It!\n");
 				RobotState = ROBOT_STATE_DrivePastHome;
@@ -380,7 +371,7 @@ int main(array<System::String ^> ^args)
 			#ifdef USE_ROBOT_SERIAL_PORT
 			robot.DriveMotorDirect(ROBOT_SPEED_BASE,ROBOT_SPEED_BASE);
 			#endif
-			ret = waitKey(4000);
+			ret = waitKey(4300);
 			//If user says this is not a goal - keep chuggin.
 			if(ret == 'n') {RobotState = ROBOT_STATE_FindLineToHome; break;}
 			//Perform 'turn 180' maneuver
@@ -403,6 +394,7 @@ int main(array<System::String ^> ^args)
 		printf("\n");
 		//=========END ROBOT STATE MACHINE================
 
+#endif
 
 		//Write Data to logfile
 		#ifdef MAKE_LOG_FILE
@@ -423,6 +415,8 @@ int main(array<System::String ^> ^args)
 			robot.QuickBeep();
 			#endif
 		}
+		if(ret == 'q')
+			break;
 
 		//Draw to Window and look for keypress
 		imshow("floatframe",colorfilt_linedet_frame);
@@ -431,9 +425,6 @@ int main(array<System::String ^> ^args)
 		imshow("frame",origframe);
 		ret = waitKey(1);
 
-
-
-#endif
 
 	}
 	
@@ -450,6 +441,8 @@ int main(array<System::String ^> ^args)
 	CloseHandle(logfile);
 	#endif
 
+	//Release Capture device
+    cvReleaseCapture(&cap);
 
 	//End of Line
     return 0;
