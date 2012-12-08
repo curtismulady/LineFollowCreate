@@ -115,7 +115,7 @@ int LineFollow_getLineWidth(Mat& src, int row_to_watch,int centerline_col, int d
 		}	
 	}
 	//Return width of line
-	return(abs(pos_dv_x_loc - neg_dv_x_loc));
+	return(pos_dv_x_loc - neg_dv_x_loc);
 }
 
 void filter_Color(Mat& src, Mat& dst, COLORNAME_t color, float pct_thresh)
