@@ -80,6 +80,22 @@ int LineFollow_getDeltaLineLoc(Mat& src, int row_to_watch,int centerline_col, in
 	}
 }
 
+bool LineFollow_isFullLine(Mat& src, int row_to_watch,int centerline_col, int delta_thresh)
+{
+	//see if all pixels on line are of right color
+	Mat grey;
+	bool success = true;
+	cv::cvtColor(src,grey,CV_BGR2GRAY);
+	int pos_dv_x_loc = 0, pos_dv_val = 0;
+	int neg_dv_x_loc = 0, neg_dv_val= 0;
+	for(int i=1; i<grey.cols-1; i++){
+		if(grey.data[row_to_watch*grey.step+i]==0)
+			success = false;
+	}
+	//Return width of line
+	return(success);
+}
+
 int LineFollow_getLineWidth(Mat& src, int row_to_watch,int centerline_col, int delta_thresh)
 {
 	//find big pos dv and big neg dv on specd row

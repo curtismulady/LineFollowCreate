@@ -26,6 +26,7 @@ void InvertColorMat(Mat& dst);
 void Draw_LineFollow_LineLoc(Mat& src, Mat& dst, int row_to_watch, int delta_thresh);
 int LineFollow_getDeltaLineLoc(Mat& src, int row_to_watch,int centerline_col, int delta_thresh);
 int LineFollow_getLineWidth(Mat& src, int row_to_watch,int centerline_col, int delta_thresh);
+bool LineFollow_isFullLine(Mat& src, int row_to_watch,int centerline_col, int delta_thresh);
 
 void filter_Color(Mat& src, Mat& dst, COLORNAME_t color, float pct_thresh);
 float getIsFullScreenColor(Mat& src, COLORNAME_t color, float pct_thresh);

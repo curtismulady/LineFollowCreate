@@ -96,6 +96,82 @@ void CreateSerial::DriveMotorDirect(signed int right_vel, signed int left_vel)
 	}
 }
 
+void CreateSerial::Beep(void)
+{
+	data_out[0] = 0x8C;
+	data_out[1]=0x00;
+	data_out[2]=0x01;
+	data_out[3]=0x45;
+	data_out[4]=0x40;
+	data_out[5] = 0x8D;
+	data_out[6] = 	0x00;
+	
+	DWORD len = 7;
+	if (!WriteFile(hSerial, data_out, len, &len, NULL)){
+		printf("\rfile write errors\n");
+	}
+}
+
+void CreateSerial::QuickBeep(void)
+{
+	data_out[0] = 0x8C;
+	data_out[1]=0x00;
+	data_out[2]=0x01;
+	data_out[3]=0x65;
+	data_out[4]=0x08;
+	data_out[5] = 0x8D;
+	data_out[6] = 	0x00;
+	
+	DWORD len = 7;
+	if (!WriteFile(hSerial, data_out, len, &len, NULL)){
+		printf("\rfile write errors\n");
+	}
+}
+
+void CreateSerial::DoubleBeep(void)
+{
+	data_out[0] = 0x8C;
+	data_out[1]=0x00;
+	data_out[2]=0x03;
+	data_out[3]=0x35;
+	data_out[4]=0x10;
+	data_out[5]=0x0;
+	data_out[6]=0x10;
+	data_out[7]=0x35;
+	data_out[8]=0x10;
+	data_out[9] = 0x8D;
+	data_out[10] = 0x00;
+	
+	DWORD len = 11;
+	if (!WriteFile(hSerial, data_out, len, &len, NULL)){
+		printf("\rfile write errors\n");
+	}
+}
+
+void CreateSerial::TripleBeep(void)
+{
+	data_out[0] = 0x8C;
+	data_out[1]=0x00;
+	data_out[2]=0x05;
+	data_out[3]=0x45;
+	data_out[4]=0x08;
+	data_out[5]=0x0;
+	data_out[6]=0x08;
+	data_out[7]=0x45;
+	data_out[8]=0x08;
+	data_out[9]=0x0;
+	data_out[10]=0x08;
+	data_out[11]=0x45;
+	data_out[12]=0x08;
+	data_out[13] = 0x8D;
+	data_out[14] = 0x00;
+	
+	DWORD len = 15;
+	if (!WriteFile(hSerial, data_out, len, &len, NULL)){
+		printf("\rfile write errors\n");
+	}
+}
+
 void CreateSerial::LightLED(bool play_led_state, bool advance_led_state, unsigned char power_led_color, unsigned char power_led_intensity)
 {
 	data_out[0] = 139;

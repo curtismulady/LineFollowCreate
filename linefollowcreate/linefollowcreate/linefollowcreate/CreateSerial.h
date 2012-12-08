@@ -14,6 +14,10 @@ public:
 	void DriveMotorDirect(signed int right_vel, signed int left_vel);
 	void LightLED(bool play_led_state, bool advance_led_state, unsigned char power_led_color, unsigned char power_led_intensity);
 	int  GetBumperStatus(void);
+	void Beep(void);
+	void TripleBeep(void);
+	void DoubleBeep(void);
+	void QuickBeep(void);
 
 private:
 	BOOL ModifyCommSettings (HANDLE hComPort);
