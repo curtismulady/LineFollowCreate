@@ -11,8 +11,12 @@
 #include <ctime>
 #include <tchar.h>
 
+using namespace System;
+using namespace cv;
+using namespace std;
 
-//===System Specific Defines===
+
+//===System Specific Defines======
 
 #define USE_ROBOT_SERIAL_PORT
 #define RUN_STATE_MACHINE
@@ -24,33 +28,22 @@
 #define ROBOT_SPEED_BASE 70
 #define CORRECTION_DIV 3
 
-//=============================
-
-using namespace System;
-using namespace cv;
-using namespace std;
+//================================
 
 
-//Global Variables
+//Global OPENCV Variables
 CvCapture* cap = NULL;
-Mat camframe,camframecopy,invframe,blurframe,cannyframe,houghframe,greyframe;
+Mat camframe,camframecopy,blurframe,greyframe;
 Mat origframe;
 Mat colorfiltframe,colorfilt_linedet_frame;
-Mat blackfiltframe,blackfilt_linedet_frame;
-Mat ylwfiltframe,ylwfilt_linedet_frame;
-
-//Misc Variables
 IplImage* iplimg;
 
+//System Variables
 COLORNAME_t colorMode = COLOR_BLUE;
 float threshVal = 0.39;
 int lineloc,lineloc_last,line_width;
-int blacklineloc,blacklineloc_last,blackline_width;
-int ylwlineloc,ylwlineloc_last,ylwline_width;
 int ret=0;//return key
-int last_was_lost = 0;
 int countdown = 0;
-int goaldetect_counter = 0;
 int frame_counter = 0;
 
 //Logfile Variables
@@ -72,23 +65,20 @@ typedef enum {
 				ROBOT_STATE_FollowLineToHome = '<',
 				ROBOT_STATE_DrivePastHome = 'H'
 			} RobotState_t;
-
 RobotState_t RobotState = ROBOT_STATE_Init;
 
-
-
-//Robot's Serial Connection
+//Initialize Robot's Serial Connection
 #ifdef USE_ROBOT_SERIAL_PORT
 CreateSerial robot(COMNUM);
 #endif
 
-
+//===========MAIN ENTRY POINT=========
 int main(array<System::String ^> ^args)
 {
 	//Notify user that program is about to start
     Console::WriteLine(L"Starting...");
 
-	//Start Robot - Initialize 
+	//Start Robot - Initialize Robot
 	#ifdef USE_ROBOT_SERIAL_PORT
 	robot.StartRobot();
 	robot.SetMode_Full();
@@ -113,7 +103,7 @@ int main(array<System::String ^> ^args)
 	bErrorFlag = WriteFile( logfile, DataBuffer, dwBytesToWrite, &dwBytesWritten, NULL);   
 	#endif
 
-	//Query user: are you ready>
+	//Query user: are you ready?
 	Console::WriteLine(L"Ready?\n");	
 
 	//Setup Camera Connection
@@ -128,18 +118,11 @@ int main(array<System::String ^> ^args)
 	else
 		flip (camframe,camframecopy,0);
 	imshow("frame",camframecopy);
+
+	//Hold for keypress (allows setup with monitor prior to running loop)
 	waitKey(0);
 
-
-
-
-
-
-
-
-
-
-
+	//=========MAIN LOOP============
 	while(cap)
 	{
 		//Inc framecounter
@@ -164,7 +147,7 @@ int main(array<System::String ^> ^args)
 
 
 
-#ifdef RUN_STATE_MACHINE
+
 
 		//Apply Filters
 		camframecopy.copyTo(origframe);											//get a new frame to work with
@@ -186,11 +169,13 @@ int main(array<System::String ^> ^args)
 		bErrorFlag = WriteFile( logfile, DataBuffer, dwBytesToWrite, &dwBytesWritten, NULL);   
 		#endif
 
-
+#ifdef RUN_STATE_MACHINE
 		//=========ROBOT STATE MACHINE================
 		printf("State=");
 		switch(RobotState)
 		{
+
+		//Init - wait for enter key press, then beep 3x and move to WaitForIDScan
 		case ROBOT_STATE_Init:
 			printf("Init");
 			if(ret == 32 || ret == 13)
@@ -203,6 +188,8 @@ int main(array<System::String ^> ^args)
 			}
 			break;
 
+		//WaitForIDScan - wait for color to fill up screen (using ID card)
+		//Once ID validated, beep, and flush some frames through before starting a run for the goal
 		case ROBOT_STATE_WaitForIDScan:
 			printf("WaitForIDScan");
 			
@@ -253,10 +240,10 @@ int main(array<System::String ^> ^args)
 			}
 			break;
 
+		//FindLineToGoal - Robot follows specified line. If line cannot be found, robot will turn in search for it.
+		//Robot beeps low tone when it thinks it has found home
 		case ROBOT_STATE_FindLineToGoal:
-			printf("FindLineToGoal");
-			//Drive Robot
-			
+			printf("FindLineToGoal");			
 			//printf("BLACK: Line: %04d | LineLast: %04d | LineWidth : %04d\n",blacklineloc,blacklineloc_last,blackline_width);
 			
 			if(line_width > 400 && line_width < 600)
@@ -275,6 +262,7 @@ int main(array<System::String ^> ^args)
 				robot.DriveMotorDirect(ROBOT_SPEED_BASE-lineloc/CORRECTION_DIV,ROBOT_SPEED_BASE+lineloc/CORRECTION_DIV);
 				#endif
 			}else{
+				//if lost - turn until we find the line again
 				if(lineloc_last < 0)
 				{
 					//find line
@@ -290,10 +278,12 @@ int main(array<System::String ^> ^args)
 			}
 			break;
 
+		//FollowLineToGoal - not used - this is summed up in the previous state
 		case ROBOT_STATE_FollowLineToGoal:
 			printf("FollowLineToGoal");
 			break;
 
+		//DrivePastGoal - Automatic behavior to situate robot over goal and make a 180 turn
 		case ROBOT_STATE_DrivePastGoal:
 			printf("DrivePastGoal");
 			//Perform 'move forward' maneuver
@@ -316,6 +306,7 @@ int main(array<System::String ^> ^args)
 
 			break;
 
+		//WaitForReturnCommand - sit and do nothing until told otherwise (enter key)
 		case ROBOT_STATE_WaitForReturnCommand:
 			printf("WaitForReturnCommand");
 			#ifdef USE_ROBOT_SERIAL_PORT
@@ -327,6 +318,8 @@ int main(array<System::String ^> ^args)
 			}
 			break;
 
+		//FindLineToHome - Robot follows specified line. If line cannot be found, robot will turn in search for it.
+		//Robot beeps low tone when it thinks it has found home
 		case ROBOT_STATE_FindLineToHome:
 			printf("FindLineToHome");
 			
@@ -346,6 +339,7 @@ int main(array<System::String ^> ^args)
 				robot.DriveMotorDirect(ROBOT_SPEED_BASE-lineloc/CORRECTION_DIV,ROBOT_SPEED_BASE+lineloc/CORRECTION_DIV);
 				#endif
 			}else{
+				//if lost - turn in place
 				if(lineloc_last < 0)
 				{
 					//find line
@@ -361,10 +355,13 @@ int main(array<System::String ^> ^args)
 			}
 			break;
 
+		//FollowLineToHome - not used. summed up in previous state
 		case ROBOT_STATE_FollowLineToHome:
 			printf("FollowLineToHome");
 			break;
 
+		//DrivePastGoal - Automatic behavior to situate robot over home and make a 180 turn
+		//When finished, robot withh go back to WaitForIDScan state.
 		case ROBOT_STATE_DrivePastHome:
 			printf("DrivePastHome");
 			//Perform 'move forward' maneuver
@@ -406,7 +403,7 @@ int main(array<System::String ^> ^args)
 		bErrorFlag = WriteFile( logfile, DataBuffer, dwBytesToWrite, &dwBytesWritten, NULL);   
 		#endif
 
-
+		//If escape key is pressed - stop robot and reset state machine
 		if(ret == 27 || ret == 32) 
 		{
 			RobotState = ROBOT_STATE_Init;
@@ -415,20 +412,17 @@ int main(array<System::String ^> ^args)
 			robot.QuickBeep();
 			#endif
 		}
+		//If q is pressed - quit (unsafely?)
 		if(ret == 'q')
 			break;
 
 		//Draw to Window and look for keypress
 		imshow("floatframe",colorfilt_linedet_frame);
-		//imshow("blk",ylwfilt_linedet_frame);
-		//imshow("blk",blarg);
 		imshow("frame",origframe);
 		ret = waitKey(1);
 
 
 	}
-	
-
 
 	//Stop Robot
 	printf("\nStopping Motors\n");
